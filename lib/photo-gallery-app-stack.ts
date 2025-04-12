@@ -6,28 +6,28 @@ import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as sns_subscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
 import * as s3_notifications from 'aws-cdk-lib/aws-s3-notifications';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
-import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda_event_sources from 'aws-cdk-lib/aws-lambda-event-sources';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
-
+import * as lambdaNodejs from 'aws-cdk-lib/aws-lambda-nodejs';
+import * as iam from 'aws-cdk-lib/aws-iam';   
 
 export class PhotoGalleryAppStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    // 1-S3 Bucket
+    // 1 - S3 Bucket
     const photoBucket = new s3.Bucket(this, 'PhotoBucket', {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
     });
 
-    // 2-SNS Topic
+    // 2 - SNS Topic
     const photoTopic = new sns.Topic(this, 'PhotoTopic');
 
-    // 3-Dead Letter Queue (DLQ)
+    // 3 - Dead Letter Queue (DLQ)
     const deadLetterQueue = new sqs.Queue(this, 'DeadLetterQueue');
 
-    // 4-Queue, connect DLQ
+    // 4 - SQS Queue, connect to DLQ
     const photoQueue = new sqs.Queue(this, 'PhotoQueue', {
       deadLetterQueue: {
         queue: deadLetterQueue,
@@ -35,60 +35,54 @@ export class PhotoGalleryAppStack extends cdk.Stack {
       }
     });
 
-    // 11-DynamoDB ImageTable
+    // 5 - DynamoDB Table
     const imageTable = new dynamodb.Table(this, 'ImageTable', {
       partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
-      removalPolicy: cdk.RemovalPolicy.DESTROY, 
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-    // 7-Lambda：LogImageFunction
-    const logImageFunction = new lambda.Function(this, 'LogImageFunction', {
+    // 6 - Lambda Functions
+    const logImageFunction = new lambdaNodejs.NodejsFunction(this, 'LogImageFunction', {
       runtime: lambda.Runtime.NODEJS_18_X,
-      handler: 'processImage.handler',
-      code: lambda.Code.fromAsset('lambdas'),
-      environment: {
-        TABLE_NAME: imageTable.tableName,
-      }      
-    });
-
-    // 8-Lambda：StatusUpdateMailerFunction
-    const statusUpdateMailerFunction = new lambda.Function(this, 'StatusUpdateMailerFunction', {
-      runtime: lambda.Runtime.NODEJS_18_X,
-      handler: 'mailer.handler',
-      code: lambda.Code.fromAsset('lambdas'),
-    });
-
-    // 12-Lambda:Remove
-    const removeImageFunction = new lambda.Function(this, 'RemoveImageFunction', {
-      runtime: lambda.Runtime.NODEJS_18_X,
-      handler: 'removeImage.handler',
-      code: lambda.Code.fromAsset('lambdas'),
-    });
-
-    // AddMetadata Lambda
-    const addMetadataFunction = new lambda.Function(this, 'AddMetadataFunction', {
-      runtime: lambda.Runtime.NODEJS_18_X,
-      handler: 'addMetadata.handler',
-      code: lambda.Code.fromAsset('lambdas'),
+      entry: 'lambdas/processImage.ts',
+      handler: 'handler',
       environment: {
         TABLE_NAME: imageTable.tableName,
       }
     });
 
-    // UpdateStatus Lambda
-    const updateStatusFunction = new lambda.Function(this, 'UpdateStatusFunction', {
+    const statusUpdateMailerFunction = new lambdaNodejs.NodejsFunction(this, 'StatusUpdateMailerFunction', {
       runtime: lambda.Runtime.NODEJS_18_X,
-      handler: 'updateStatus.handler',
-      code: lambda.Code.fromAsset('lambdas'),
+      entry: 'lambdas/mailer.ts',
+      handler: 'handler',
+    });
+
+    const removeImageFunction = new lambdaNodejs.NodejsFunction(this, 'RemoveImageFunction', {
+      runtime: lambda.Runtime.NODEJS_18_X,
+      entry: 'lambdas/removeImage.ts',
+      handler: 'handler',
+    });
+
+    const addMetadataFunction = new lambdaNodejs.NodejsFunction(this, 'AddMetadataFunction', {
+      runtime: lambda.Runtime.NODEJS_18_X,
+      entry: 'lambdas/addMetadata.ts',
+      handler: 'handler',
       environment: {
         TABLE_NAME: imageTable.tableName,
       }
     });
 
-    // 5-SNS Topic, SQS Queue
+    const updateStatusFunction = new lambdaNodejs.NodejsFunction(this, 'UpdateStatusFunction', {
+      runtime: lambda.Runtime.NODEJS_18_X,
+      entry: 'lambdas/updateStatus.ts',
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: imageTable.tableName,
+      }
+    });
+
+    // 7 - SNS Subscriptions
     photoTopic.addSubscription(new sns_subscriptions.SqsSubscription(photoQueue));
-
-    // AddMetadata Subscription
     photoTopic.addSubscription(new sns_subscriptions.LambdaSubscription(addMetadataFunction, {
       filterPolicy: {
         metadata_type: sns.SubscriptionFilter.stringFilter({
@@ -96,42 +90,39 @@ export class PhotoGalleryAppStack extends cdk.Stack {
         }),
       }
     }));
-
-    // UpdateStatus Subscription
-    photoTopic.addSubscription(new sns_subscriptions.LambdaSubscription(updateStatusFunction, {
-      filterPolicy: {
-      }
-    }));
-
-    // StatusUpdateMailer Subscription（with UpdateStatus）
+    photoTopic.addSubscription(new sns_subscriptions.LambdaSubscription(updateStatusFunction));
     photoTopic.addSubscription(new sns_subscriptions.LambdaSubscription(statusUpdateMailerFunction, {
       filterPolicy: {
+        eventType: sns.SubscriptionFilter.stringFilter({
+          allowlist: ['Review'],
+        }),
       }
     }));
 
-    // 6-S3 Bucket object upload -> trigger SNS Topic
+    // 8 - S3 Upload -> SNS Notification
     photoBucket.addEventNotification(
       s3.EventType.OBJECT_CREATED,
       new s3_notifications.SnsDestination(photoTopic)
     );
 
+    // 9 - Grant Permissions
     photoBucket.grantDelete(removeImageFunction);
 
-    // 9-Allow Lambda to read messages from SQS
     photoQueue.grantConsumeMessages(logImageFunction);
-
-    // 10-Set LogImageFunction to listen to the SQS queue
     logImageFunction.addEventSource(new lambda_event_sources.SqsEventSource(photoQueue));
 
     removeImageFunction.addEventSource(new lambda_event_sources.SqsEventSource(deadLetterQueue));
 
-    // Authorize Lambda to access the table
     imageTable.grantWriteData(logImageFunction);
     imageTable.grantWriteData(addMetadataFunction);
     imageTable.grantWriteData(updateStatusFunction);
 
-    
-    // Output
+    statusUpdateMailerFunction.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['ses:SendEmail'],
+      resources: ['*'],
+    }));    
+
+    // 10 - Output Resources
     new cdk.CfnOutput(this, 'PhotoBucketName', {
       value: photoBucket.bucketName,
     });

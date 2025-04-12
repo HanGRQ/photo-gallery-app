@@ -9,13 +9,17 @@ export const handler = async (event: SNSEvent): Promise<void> => {
   for (const record of event.Records) {
     const body = JSON.parse(record.Sns.Message);
     const id = body.id;
-    const status = body.update.status;
-    const reason = body.update.reason;
+    const update = body.update;
+
+    if (!id || !update) {
+      console.error('Invalid message format: missing id or update');
+      continue;
+    }
 
     const emailParams = {
-      Source: 'masihan0303@gmail.com',  
+      Source: 'masihan0303@gmail.com',
       Destination: {
-        ToAddresses: ['masihan0303@gmail.com'],  
+        ToAddresses: ['masihan0303@gmail.com'],
       },
       Message: {
         Subject: {
@@ -23,7 +27,7 @@ export const handler = async (event: SNSEvent): Promise<void> => {
         },
         Body: {
           Text: {
-            Data: `Your photo has been reviewed.\nStatus: ${status}\nReason: ${reason}`,
+            Data: `Your photo has been reviewed.\nStatus: ${update.status}\nReason: ${update.reason || 'None'}`,
           },
         },
       },

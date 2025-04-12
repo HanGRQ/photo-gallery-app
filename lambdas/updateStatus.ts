@@ -5,31 +5,32 @@ const ddb = new AWS.DynamoDB();
 const tableName = process.env.TABLE_NAME!;
 
 export const handler = async (event: SNSEvent): Promise<void> => {
-  console.log('Received SNS Status Update Event:', JSON.stringify(event, null, 2));
+  console.log('Received SNS Event for status update:', JSON.stringify(event, null, 2));
 
   for (const record of event.Records) {
     const body = JSON.parse(record.Sns.Message);
     const id = body.id;
-    const date = body.date;
-    const status = body.update.status;
-    const reason = body.update.reason;
+    const update = body.update;
 
-    if (!['Pass', 'Reject'].includes(status)) {
-      console.error('Invalid status:', status);
+    if (!id || !update) {
+      console.error('Invalid message format: missing id or update');
       continue;
     }
 
     await ddb.updateItem({
       TableName: tableName,
       Key: { id: { S: id } },
-      UpdateExpression: `SET Status = :status, DecisionDate = :date, Reason = :reason`,
+      UpdateExpression: 'SET #st = :status, #rs = :reason',
+      ExpressionAttributeNames: {
+        '#st': 'status',
+        '#rs': 'reason',
+      },
       ExpressionAttributeValues: {
-        ':status': { S: status },
-        ':date': { S: date },
-        ':reason': { S: reason },
+        ':status': { S: update.status },
+        ':reason': { S: update.reason || '' },
       },
     }).promise();
 
-    console.log(`Updated status for image ${id}`);
+    console.log(`Status updated for item ${id}`);
   }
 };

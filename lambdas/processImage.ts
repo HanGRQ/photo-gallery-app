@@ -11,7 +11,9 @@ export const handler = async (event: SQSEvent): Promise<void> => {
 
   for (const record of event.Records) {
     const message = JSON.parse(record.body);
-    const s3Info = message.Records[0].s3;
+    const snsMessage = JSON.parse(message.Message); // 🛠️ 加这一行！
+    const s3Info = snsMessage.Records[0].s3;
+
     const bucketName = s3Info.bucket.name;
     const objectKey = decodeURIComponent(s3Info.object.key.replace(/\+/g, ' '));
 
@@ -22,7 +24,6 @@ export const handler = async (event: SQSEvent): Promise<void> => {
       throw new Error('Unsupported file type'); 
     }
 
-    // write DynamoDB table
     await ddb.putItem({
       TableName: tableName,
       Item: {
