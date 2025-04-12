@@ -65,8 +65,49 @@ export class PhotoGalleryAppStack extends cdk.Stack {
       code: lambda.Code.fromAsset('lambdas'),
     });
 
+    // AddMetadata Lambda
+    const addMetadataFunction = new lambda.Function(this, 'AddMetadataFunction', {
+      runtime: lambda.Runtime.NODEJS_18_X,
+      handler: 'addMetadata.handler',
+      code: lambda.Code.fromAsset('lambdas'),
+      environment: {
+        TABLE_NAME: imageTable.tableName,
+      }
+    });
+
+    // UpdateStatus Lambda
+    const updateStatusFunction = new lambda.Function(this, 'UpdateStatusFunction', {
+      runtime: lambda.Runtime.NODEJS_18_X,
+      handler: 'updateStatus.handler',
+      code: lambda.Code.fromAsset('lambdas'),
+      environment: {
+        TABLE_NAME: imageTable.tableName,
+      }
+    });
+
     // 5-SNS Topic, SQS Queue
     photoTopic.addSubscription(new sns_subscriptions.SqsSubscription(photoQueue));
+
+    // AddMetadata Subscription
+    photoTopic.addSubscription(new sns_subscriptions.LambdaSubscription(addMetadataFunction, {
+      filterPolicy: {
+        metadata_type: sns.SubscriptionFilter.stringFilter({
+          allowlist: ['Caption', 'Date', 'Name'],
+        }),
+      }
+    }));
+
+    // UpdateStatus Subscription
+    photoTopic.addSubscription(new sns_subscriptions.LambdaSubscription(updateStatusFunction, {
+      filterPolicy: {
+      }
+    }));
+
+    // StatusUpdateMailer Subscription（with UpdateStatus）
+    photoTopic.addSubscription(new sns_subscriptions.LambdaSubscription(statusUpdateMailerFunction, {
+      filterPolicy: {
+      }
+    }));
 
     // 6-S3 Bucket object upload -> trigger SNS Topic
     photoBucket.addEventNotification(
@@ -86,6 +127,8 @@ export class PhotoGalleryAppStack extends cdk.Stack {
 
     // Authorize Lambda to access the table
     imageTable.grantWriteData(logImageFunction);
+    imageTable.grantWriteData(addMetadataFunction);
+    imageTable.grantWriteData(updateStatusFunction);
 
     
     // Output
