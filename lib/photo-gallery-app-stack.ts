@@ -55,6 +55,9 @@ export class PhotoGalleryAppStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_18_X,
       entry: 'lambdas/mailer.ts',
       handler: 'handler',
+      environment: {
+        TABLE_NAME: imageTable.tableName,
+      }
     });
 
     const removeImageFunction = new lambdaNodejs.NodejsFunction(this, 'RemoveImageFunction', {
@@ -81,8 +84,9 @@ export class PhotoGalleryAppStack extends cdk.Stack {
       }
     });
 
-    // 7 - SNS Subscriptions
+    // 7 - SNS Subscriptions with proper filtering
     photoTopic.addSubscription(new sns_subscriptions.SqsSubscription(photoQueue));
+    
     photoTopic.addSubscription(new sns_subscriptions.LambdaSubscription(addMetadataFunction, {
       filterPolicy: {
         metadata_type: sns.SubscriptionFilter.stringFilter({
@@ -90,7 +94,9 @@ export class PhotoGalleryAppStack extends cdk.Stack {
         }),
       }
     }));
+    
     photoTopic.addSubscription(new sns_subscriptions.LambdaSubscription(updateStatusFunction));
+    
     photoTopic.addSubscription(new sns_subscriptions.LambdaSubscription(statusUpdateMailerFunction, {
       filterPolicy: {
         eventType: sns.SubscriptionFilter.stringFilter({
@@ -107,15 +113,20 @@ export class PhotoGalleryAppStack extends cdk.Stack {
 
     // 9 - Grant Permissions
     photoBucket.grantDelete(removeImageFunction);
+    photoBucket.grantRead(logImageFunction);
 
     photoQueue.grantConsumeMessages(logImageFunction);
     logImageFunction.addEventSource(new lambda_event_sources.SqsEventSource(photoQueue));
 
+    deadLetterQueue.grantConsumeMessages(removeImageFunction);
     removeImageFunction.addEventSource(new lambda_event_sources.SqsEventSource(deadLetterQueue));
 
     imageTable.grantWriteData(logImageFunction);
     imageTable.grantWriteData(addMetadataFunction);
     imageTable.grantWriteData(updateStatusFunction);
+    imageTable.grantReadWriteData(statusUpdateMailerFunction);
+
+    photoTopic.grantPublish(updateStatusFunction);
 
     statusUpdateMailerFunction.addToRolePolicy(new iam.PolicyStatement({
       actions: ['ses:SendEmail'],

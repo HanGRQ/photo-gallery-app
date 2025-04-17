@@ -2,16 +2,14 @@ import { SQSEvent } from 'aws-lambda';
 import * as AWS from 'aws-sdk';
 
 const ddb = new AWS.DynamoDB();
-const s3 = new AWS.S3();
-
 const tableName = process.env.TABLE_NAME!;
 
 export const handler = async (event: SQSEvent): Promise<void> => {
   console.log('Received SQS Event:', JSON.stringify(event, null, 2));
 
   for (const record of event.Records) {
-    const message = JSON.parse(record.body);
-    const snsMessage = JSON.parse(message.Message); // 🛠️ 加这一行！
+    const body = JSON.parse(record.body);
+    const snsMessage = JSON.parse(body.Message);
     const s3Info = snsMessage.Records[0].s3;
 
     const bucketName = s3Info.bucket.name;
@@ -19,7 +17,7 @@ export const handler = async (event: SQSEvent): Promise<void> => {
 
     console.log(`Processing file: ${objectKey}`);
 
-    if (!(objectKey.endsWith('.jpeg') || objectKey.endsWith('.png'))) {
+    if (!(objectKey.toLowerCase().endsWith('.jpeg') || objectKey.toLowerCase().endsWith('.png'))) {
       console.error(`Invalid file type: ${objectKey}`);
       throw new Error('Unsupported file type'); 
     }
