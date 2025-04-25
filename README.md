@@ -1,14 +1,70 @@
-# Welcome to your CDK TypeScript project
+## Distributed Systems - Event-Driven Architecture.
 
-This is a blank project for CDK development with TypeScript.
+__Name:__ Sihan Ma
 
-The `cdk.json` file tells the CDK Toolkit how to execute your app.
+__Demo__: https://youtu.be/qe3Mrn925fE 
 
-## Useful commands
+This repository contains the implementation of a skeleton design for an application that manages a photo gallery, illustrated below. The app uses an event-driven architecture and is deployed on the AWS platform using the CDK framework for infrastructure provisioning.
 
-* `npm run build`   compile typescript to js
-* `npm run watch`   watch for changes and compile
-* `npm run test`    perform the jest unit tests
-* `npx cdk deploy`  deploy this stack to your default AWS account/region
-* `npx cdk diff`    compare deployed stack with current state
-* `npx cdk synth`   emits the synthesized CloudFormation template
+![](images/arch.jpg)
+
+### Code Status.
+
+[Advice: In this section, state the status of your submission for each feature listed below. The status options are: (1) Completed & Tested; (2) Attempted (i.e. partially works); (3) Not Attempted. Option (1) implies the feature performs the required action (e.g. updates the table) __only when appropriate__, as dictated by the relevant filtering policy described in the specification.]
+
+__Feature:__
++ Photographer:
+  + **Log new Images** – ✅ Completed & Tested
+     ⤷ Uploading `.jpeg` or `.png` triggers SQS → Lambda → DynamoDB logging
+  + **Metadata updating** – ✅ Completed & Tested
+     ⤷ SNS messages with metadata_type (Caption / Date / Name) are correctly filtered and handled
+  + **Invalid image removal** – ✅ Completed & Tested
+     ⤷ Invalid file types (e.g., `.txt`) routed to DLQ → deleted via Lambda
+  + **Status Update Mailer** – ✅ Completed & Tested
+     ⤷ Moderator updates trigger SNS → Mailer, verified via logs and SES delivery
++ Moderator
+  + **Status updating** – ✅ Completed & Tested
+     ⤷ SNS messages update image status and reason in DynamoDB
+  + **Filtering** – ✅ Completed & Tested
+     ⤷ SNS filter policies ensure only relevant Lambda functions are triggered
+  + **Messaging** – ✅ Completed & Tested
+     ⤷ End-to-end event flow verified from S3 → SNS → SQS/Lambda → DynamoDB/SES
+
+### Notes (Optional)
+
+#### (1) Add meta data
+
+![](images\1.png)
+
+![2](images\2.png)
+
+![3](images\3.png)
+
+##### SNS filtering has been verified:
+
+- The SNS message contains the MessageAttribute of "metadata_type"
+- only AddMetadataFunction is triggered (confirmed by the log RequestId and function name).
+- No other Lambda (such as StatusUpdateMailerFunction) is triggered, indicating that the SNS filterPolicy is working correctly.
+
+#### (2) Update Status
+
+![](images\7.png)
+
+#### (3) Remove invalid file
+
+![](images\8.png)
+
+#### (4) Status update email
+
+![](images\4.png)
+
+##### SNS Filtering takes effect：
+
+- When receiving an SNS event, the message attribute value contains "eventType": "Review".
+- The log clearly shows that StatusUpdateMailer is triggered, not other functions.
+
+#### (5) BucketNotificationsHandler & customS3AutoDeleteObjectCust
+
+![](images\5.png)
+
+![](images\6.png)
