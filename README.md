@@ -14,31 +14,31 @@ This repository contains the implementation of a skeleton design for an applicat
 
 __Feature:__
 + Photographer:
-  + **Log new Images** – ✅ Completed & Tested
+  + **Log new Images** – ✅ **Completed & Tested**<br>
      ⤷ Uploading `.jpeg` or `.png` triggers SQS → Lambda → DynamoDB logging
-  + **Metadata updating** – ✅ Completed & Tested
+  + **Metadata updating** – ✅ **Completed & Tested**<br>
      ⤷ SNS messages with metadata_type (Caption / Date / Name) are correctly filtered and handled
-  + **Invalid image removal** – ✅ Completed & Tested
+  + **Invalid image removal** – ✅ **Completed & Tested**<br>
      ⤷ Invalid file types (e.g., `.txt`) routed to DLQ → deleted via Lambda
-  + **Status Update Mailer** – ✅ Completed & Tested
+  + **Status Update Mailer** – ✅ **Completed & Tested**<br>
      ⤷ Moderator updates trigger SNS → Mailer, verified via logs and SES delivery
 + Moderator
-  + **Status updating** – ✅ Completed & Tested
+  + **Status updating** – ✅ **Completed & Tested**<br>
      ⤷ SNS messages update image status and reason in DynamoDB
-  + **Filtering** – ✅ Completed & Tested
+  + **Filtering** – ✅ **Completed & Tested**<br>
      ⤷ SNS filter policies ensure only relevant Lambda functions are triggered
-  + **Messaging** – ✅ Completed & Tested
+  + **Messaging** – ✅ **Completed & Tested**<br>
      ⤷ End-to-end event flow verified from S3 → SNS → SQS/Lambda → DynamoDB/SES
 
 ### Notes (Optional)
 
 #### (1) Add meta data
 
-![](images\1.png)
+![](images/1.png)
 
-![2](images\2.png)
+![2](images/2.png)
 
-![3](images\3.png)
+![3](images/3.png)
 
 ##### SNS filtering has been verified:
 
@@ -48,15 +48,15 @@ __Feature:__
 
 #### (2) Update Status
 
-![](images\7.png)
+![](images/7.png)
 
 #### (3) Remove invalid file
 
-![](images\8.png)
+![](images/8.png)
 
 #### (4) Status update email
 
-![](images\4.png)
+![](images/4.png)
 
 ##### SNS Filtering takes effect：
 
@@ -65,6 +65,6 @@ __Feature:__
 
 #### (5) BucketNotificationsHandler & customS3AutoDeleteObjectCust
 
-![](images\5.png)
+![](images/5.png)
 
-![](images\6.png)
+![](images/6.png)
