@@ -34,7 +34,7 @@ __Feature:__
 
 I implemented function-level event filtering through SNS filterPolicy. For example, when a user uploads a picture and triggers an SNS notification, only messages containing "metadata_type" and whose values are "Caption", "Date" or "Name" will be sent to the Lambda AddMetadataFunction for processing. If the message contains "eventType": "Review", it will only be received by StatusUpdateMailerFunction, which will then execute the logic of sending emails.
 
-At the same time, I also explicitly configured IAM permissions in Lambda through addToRolePolicy, such as adding SES SendEmail permissions to the function that sends emails.
+At the same time, I explicitly configured IAM permissions in Lambda through addToRolePolicy, such as adding SES SendEmail permissions to the function that sends emails.
 
 The specific log is shown in the screenshot below:
 
