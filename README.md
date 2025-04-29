@@ -6,7 +6,7 @@ __Demo__: https://youtu.be/qe3Mrn925fE
 
 This repository contains the implementation of a skeleton design for an application that manages a photo gallery, illustrated below. The app uses an event-driven architecture and is deployed on the AWS platform using the CDK framework for infrastructure provisioning.
 
-<img src="./images/arch.jpg" style="zoom:67%;" />
+<img src="./images/arch.jpg" width="600" />
 
 ### Code Status.
 
@@ -40,11 +40,9 @@ The specific log is shown in the screenshot below:
 
 #### (1) Add meta data
 
-![](./images/1.png)
-
-![](./images/2.png)
-
-![](./images/3.png)
+<img src="./images/1.png" width="600" />
+<img src="./images/2.png" width="600" />
+<img src="./images/3.png" width="600" />
 
 ##### SNS filtering has been verified:
 
@@ -54,15 +52,15 @@ The specific log is shown in the screenshot below:
 
 #### (2) Update Status
 
-![](./images/7.png)
+<img src="./images/7.png" width="600" />
 
 #### (3) Remove invalid file
 
-![](./images/8.png)
+<img src="./images/8.png" width="600" />
 
 #### (4) Status update email
 
-![](./images/4.png)
+<img src="./images/4.png" width="600" />
 
 ##### SNS Filtering takes effect：
 
@@ -71,6 +69,5 @@ The specific log is shown in the screenshot below:
 
 #### (5) BucketNotificationsHandler & customS3AutoDeleteObjectCust
 
-![](./images/5.png)
-
-![](./images/6.png)
+<img src="./images/5.png" width="600" />
+<img src="./images/6.png" width="600" />
