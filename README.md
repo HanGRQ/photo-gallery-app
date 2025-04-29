@@ -42,9 +42,9 @@ The specific log is shown in the screenshot below:
 
 ![](./images/1.png)
 
-![2](./images/2.png)
+![](./images/2.png)
 
-![3](./images/3.png)
+![](./images/3.png)
 
 ##### SNS filtering has been verified:
 
