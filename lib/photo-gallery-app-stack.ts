@@ -111,7 +111,7 @@ export class PhotoGalleryAppStack extends cdk.Stack {
       new s3_notifications.SnsDestination(photoTopic)
     );
 
-    // 9 - Grant Permissions
+    // 9 - Grant Permission
     photoBucket.grantDelete(removeImageFunction);
     photoBucket.grantRead(logImageFunction);
 
