@@ -84,7 +84,7 @@ export class PhotoGalleryAppStack extends cdk.Stack {
       }
     });
 
-    // 7 - SNS Subscriptions with proper filtering
+    // 7 - SNS Subscriptions with filtering
     photoTopic.addSubscription(new sns_subscriptions.SqsSubscription(photoQueue));
     
     photoTopic.addSubscription(new sns_subscriptions.LambdaSubscription(addMetadataFunction, {
